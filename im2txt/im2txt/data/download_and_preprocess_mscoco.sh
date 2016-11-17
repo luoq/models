@@ -50,7 +50,7 @@ function download_and_unzip() {
 
   if [ ! -f ${FILENAME} ]; then
     echo "Downloading ${FILENAME} to $(pwd)"
-    wget -nd -c "${BASE_URL}/${FILENAME}"
+    aria2c -x 5 -c "${BASE_URL}/${FILENAME}"
   else
     echo "Skipping download of ${FILENAME}"
   fi

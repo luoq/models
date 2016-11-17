@@ -80,9 +80,9 @@ This is done for two reasons:
 Running this script using 16 threads may take around 1 hour on a HP Z420.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+
+
+
 
 from collections import Counter
 from collections import namedtuple
@@ -178,26 +178,31 @@ class ImageDecoder(object):
     assert image.shape[2] == 3
     return image
 
-
 def _int64_feature(value):
-  """Wrapper for inserting an int64 Feature into a SequenceExample proto."""
-  return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
+    """Wrapper for inserting an int64 Feature into a SequenceExample proto."""
+    return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
 
-def _bytes_feature(value):
-  """Wrapper for inserting a bytes Feature into a SequenceExample proto."""
-  return tf.train.Feature(bytes_list=tf.train.BytesList(value=[str(value)]))
+def _bytes_feature(v):
+    """Wrapper for inserting a bytes Feature into a SequenceExample proto."""
+    return tf.train.Feature(bytes_list=tf.train.BytesList(value=[v]))
+
+def _str_feature(v):
+    """Wrapper for inserting a bytes Feature into a SequenceExample proto."""
+    return tf.train.Feature(bytes_list=tf.train.BytesList(value=[v.encode('utf-8')]))
 
 
 def _int64_feature_list(values):
-  """Wrapper for inserting an int64 FeatureList into a SequenceExample proto."""
-  return tf.train.FeatureList(feature=[_int64_feature(v) for v in values])
-
+    """Wrapper for inserting an int64 FeatureList into a SequenceExample proto."""
+    return tf.train.FeatureList(feature=[_int64_feature(v) for v in values])
 
 def _bytes_feature_list(values):
-  """Wrapper for inserting a bytes FeatureList into a SequenceExample proto."""
-  return tf.train.FeatureList(feature=[_bytes_feature(v) for v in values])
+    """Wrapper for inserting a bytes FeatureList into a SequenceExample proto."""
+    return tf.train.FeatureList(feature=[_bytes_feature(v) for v in values])
 
+def _str_feature_list(values):
+    """Wrapper for inserting a bytes FeatureList into a SequenceExample proto."""
+    return tf.train.FeatureList(feature=[_str_feature(v) for v in values])
 
 def _to_sequence_example(image, decoder, vocab):
   """Builds a SequenceExample proto for an image-caption pair.
@@ -228,7 +233,7 @@ def _to_sequence_example(image, decoder, vocab):
   caption = image.captions[0]
   caption_ids = [vocab.word_to_id(word) for word in caption]
   feature_lists = tf.train.FeatureLists(feature_list={
-      "image/caption": _bytes_feature_list(caption),
+      "image/caption": _str_feature_list(caption),
       "image/caption_ids": _int64_feature_list(caption_ids)
   })
   sequence_example = tf.train.SequenceExample(
@@ -263,7 +268,7 @@ def _process_image_files(thread_index, ranges, name, images, decoder, vocab,
   num_images_in_thread = ranges[thread_index][1] - ranges[thread_index][0]
 
   counter = 0
-  for s in xrange(num_shards_per_batch):
+  for s in range(num_shards_per_batch):
     # Generate a sharded version of the file name, e.g. 'train-00002-of-00010'
     shard = thread_index * num_shards_per_batch + s
     output_filename = "%s-%.5d-of-%.5d" % (name, shard, num_shards)
@@ -319,7 +324,7 @@ def _process_dataset(name, images, vocab, num_shards):
   spacing = np.linspace(0, len(images), num_threads + 1).astype(np.int)
   ranges = []
   threads = []
-  for i in xrange(len(spacing) - 1):
+  for i in range(len(spacing) - 1):
     ranges.append([spacing[i], spacing[i + 1]])
 
   # Create a mechanism for monitoring when all threads are finished.
@@ -330,7 +335,7 @@ def _process_dataset(name, images, vocab, num_shards):
 
   # Launch a thread for each batch.
   print("Launching %d threads for spacings: %s" % (num_threads, ranges))
-  for thread_index in xrange(len(ranges)):
+  for thread_index in range(len(ranges)):
     args = (thread_index, ranges, name, images, decoder, vocab, num_shards)
     t = threading.Thread(target=_process_image_files, args=args)
     t.start()
@@ -361,7 +366,7 @@ def _create_vocab(captions):
   print("Total words:", len(counter))
 
   # Filter uncommon words and sort by descending count.
-  word_counts = [x for x in counter.items() if x[1] >= FLAGS.min_word_count]
+  word_counts = [x for x in list(counter.items()) if x[1] >= FLAGS.min_word_count]
   word_counts.sort(key=lambda x: x[1], reverse=True)
   print("Words in vocabulary:", len(word_counts))
 
@@ -405,7 +410,7 @@ def _load_and_process_metadata(captions_file, image_dir):
     A list of ImageMetadata.
   """
   with tf.gfile.FastGFile(captions_file, "r") as f:
-    caption_data = json.load(f)
+    caption_data = json.loads(f.read().decode())
 
   # Extract the filenames.
   id_to_filename = [(x["id"], x["file_name"]) for x in caption_data["images"]]
