@@ -20,11 +20,13 @@
 
 import heapq
 import math
+from functools import total_ordering
 
 
 import numpy as np
 
 
+@total_ordering
 class Caption(object):
   """Represents a complete or partial caption."""
 
@@ -45,16 +47,11 @@ class Caption(object):
     self.score = score
     self.metadata = metadata
 
-  def __cmp__(self, other):
-    """Compares Captions by score."""
-    assert isinstance(other, Caption)
-    if self.score == other.score:
-      return 0
-    elif self.score < other.score:
-      return -1
-    else:
-      return 1
+  def __lt__(self, other):
+      return self.score < other.score
 
+  def __eq__(self, other):
+      return self.score == other.score
 
 class TopN(object):
   """Maintains the top n elements of an incrementally provided set."""
